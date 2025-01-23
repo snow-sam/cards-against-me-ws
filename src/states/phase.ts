@@ -21,13 +21,13 @@ export class StartPhase extends Phase {
         const cardsLeft = 10 - player.getCards().size
 
         if (cardsLeft > 0) player.updateCards([...answerCards.splice(-cardsLeft)])
-
-        socket.emit("data", "cards", [...player.getCards()])
-
+        socket.emit("cards", [...player.getCards()])
+        console.log(player.getCards())
         player.setReady()
 
+        io.emit("data", { type: "client", message, name: player.name })
         if (canTransition()) {
-            io.emit("data", "message", questionCards.pop())
+            io.emit("data", { type: "server", message: questionCards.pop() })
             this.context.transitionTo(new SendingPhase())
         }
     }
@@ -38,13 +38,21 @@ export class SendingPhase extends Phase {
         const { playerVotes, canTransition, io } = this.context
         if (!player.getCards()?.has(message)) return
 
-        playerVotes.set(message, new Set())
-
+        playerVotes.set([message, player.name], new Set())
         player.removeCard(message).setReady()
-        console.log(message)
 
         if (canTransition()) {
-            io.emit("data", "message", [...playerVotes.keys()])
+            let time = 1000
+            io.emit("cards", [...playerVotes.keys()].map(([card, name]) => card))
+            playerVotes.forEach((_, key) => {
+                setTimeout(() => {
+                    io.emit("data", { type: "client", message: key[0], name: key[1] })
+                }, time)
+                time += 1000
+            })
+            setTimeout(() => {
+                io.emit("data", { type: "room", message: "Votação iniciada" })
+            }, time)
             this.context.transitionTo(new VotingPhase())
         }
     }
@@ -53,17 +61,14 @@ export class SendingPhase extends Phase {
 export class VotingPhase extends Phase {
     public digestMessage(message: string, socket: Socket, player: Player): void {
         const { playerVotes, canTransition, io } = this.context
-        const votingCards = new Set(playerVotes.keys())
-        if (!votingCards.has(message)) return
-
-        playerVotes.get(message).add(player.name)
+        playerVotes.get([message, player.name])?.add(player.name)
 
         player.setReady()
 
-        console.log(message)
-
+        io.emit("data", { type: "client", message, name: player.name })
         if (canTransition()) {
-            io.emit("data", "message", "Winner")
+            io.emit("data", { type: "server", message: "Winner" })
+            io.emit("cards", ["Ready"])
             playerVotes.clear()
             this.context.transitionTo(new StartPhase());
         }

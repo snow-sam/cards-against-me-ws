@@ -2,7 +2,7 @@ import { io } from "socket.io-client";
 import readline from "readline";
 
 // Conecta ao servidor Socket.IO
-const socket = io("http://localhost:3000", {
+const socket = io("http://localhost:4000", {
   query: {
     name: process.argv[2] || ""
   }
@@ -14,6 +14,8 @@ const rl = readline.createInterface({
   output: process.stdout,
   prompt: "Você> ",
 });
+
+socket.on("connect", () => console.log("Testando"))
 
 // Evento para receber mensagens do servidor
 socket.on("data", (type, data) => {
