@@ -100,7 +100,7 @@ export class VotingPhase extends Phase {
         const winner = winners.pop().author
         scoreMap.set(winner, scoreMap.get(winner) + 1)
         const scoreList = Array.from(scoreMap);
-        scoreList.sort((a, b) => a[1] - b[1])
+        scoreList.sort((a, b) => b[1] - a[1])
         server.emitRoomMessage(`${winner} venceu`)
         server.emitScore(scoreList)
         server.sendCards([])
