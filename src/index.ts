@@ -63,6 +63,10 @@ io.of("/").adapter.on("leave-room", (roomId, id) => {
 const HOST = "0.0.0.0"
 const PORT = 4000
 
+app.get("/health", (req, res) => {
+    res.sendStatus(200)
+})
+
 server.listen(PORT, HOST, () => {
     console.log(`Servidor rodando em http://${HOST}:${PORT}`);
 });
