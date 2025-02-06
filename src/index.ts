@@ -9,6 +9,8 @@ import { createServer } from "http"
 const app = express();
 const server = createServer(app);
 
+const socketIdPlayerMap = new Map()
+const roomBrockerMap = new Map()
 
 const io = new Server(server, {
     cors: {
@@ -17,25 +19,46 @@ const io = new Server(server, {
     },
 });
 
-const brocker = new Brocker(io, new StartPhase())
-
 io.on("connection", (socket) => {
     const name = socket.handshake.query.name as string || ""
+    const roomId = socket.handshake.query.roomId as string || ""
 
-    socket.data = { name }
-    io.emit("data", { type: "room", message: `${name} has entered` })
-
-    const player = brocker.addPlayer(new Player(name))
+    socket.data = { name, roomId: `room-${roomId}` }
+    socket.join(`room-${roomId}`)
 
     socket.on("message", (message: string) => {
-        brocker.digestMessage(message, socket, player)
-    })
-
-    socket.on("disconnect", () => {
-        io.emit("data", { type: "room", message: `${name} has left` })
-        brocker.removePlayer(player)
+        const brocker = roomBrockerMap.get(socket.data.roomId)
+        brocker.digestMessage(message, socketIdPlayerMap.get(socket.id))
     })
 })
+
+io.of("/").adapter.on("create-room", (roomId) => {
+    if (!/room-\d+$/.test(roomId)) return
+    roomBrockerMap.set(roomId, new Brocker(io, roomId, new StartPhase()))
+});
+
+io.of("/").adapter.on("join-room", (roomId, id) => {
+    if (!roomBrockerMap.has(roomId)) return
+    const brocker = roomBrockerMap.get(roomId)
+    const socket = io.sockets.sockets.get(id)
+    const player = brocker.addPlayer(new Player(socket.data.name, id))
+    socketIdPlayerMap.set(id, player)
+    brocker.server.emitRoomMessage(`${player.name} has entered`)
+});
+
+io.of("/").adapter.on("delete-room", (roomId) => {
+    if (!roomBrockerMap.has(roomId)) return
+    roomBrockerMap.delete(roomId);
+});
+
+io.of("/").adapter.on("leave-room", (roomId, id) => {
+    if (!roomBrockerMap.has(roomId)) return
+    const brocker = roomBrockerMap.get(roomId)
+    const player = socketIdPlayerMap.get(id)
+    brocker.server.emitRoomMessage(`${player.name} has left`)
+    brocker.removePlayer(player.name)
+    socketIdPlayerMap.delete(id)
+});
 
 const HOST = "0.0.0.0"
 const PORT = 4000

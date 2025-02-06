@@ -2,10 +2,12 @@ export class Player implements Observer {
     private cards: Set<string>;
     public name: string;
     public ready: boolean
+    public socketID: string;
 
-    constructor(name: string) {
+    constructor(name: string, socketID: string) {
         this.name = name;
         this.cards = new Set;
+        this.socketID = socketID;
         this.ready = false
     }
 
