@@ -15,9 +15,8 @@ export abstract class Phase {
 
 export class StartPhase extends Phase {
     public digestMessage(message: string, player: Player): void {
-        const { completePlayerCards, server } = this.context
+        const { completePlayerCards } = this.context
 
-        server.emitClientMessage(message, player.name)
         completePlayerCards(player)
         player.setReady()
         this.trasition()
@@ -73,9 +72,42 @@ export class VotingPhase extends Phase {
         const { server, playerVotes, canTransition } = this.context
         if (!canTransition()) return
 
-        server.emitServerMessage("Winner")
-        server.sendCards(["Ready"])
+        // Calcular vencedor
+        let winnerCards: Map<number, Card[]> = new Map()
+        let mostVotes = 0
+
+        playerVotes.forEach(card => {
+            const nVotes = card.voters.size
+
+            if(nVotes > mostVotes) mostVotes = nVotes
+            if(!winnerCards.has(nVotes)) winnerCards.set(nVotes, [])
+            winnerCards.get(nVotes).push(card)
+        })
+
         playerVotes.clear()
+
+        const winners = winnerCards.get(mostVotes)
+
+        if (winners.length !== 1) {
+            winners.forEach(card => playerVotes.set(card.text, card))
+            server.emitRoomMessage("Votação empatada")
+            server.emitRoomMessage("Escolha uma das opções de desempate")
+            server.sendCards(winners.map(card => card.text))
+            this.context.transitionTo(new VotingPhase());
+            return
+        }
+
+        server.emitRoomMessage(`${winners.pop().author} venceu`)
+        server.sendCards([])
         this.context.transitionTo(new StartPhase());
+    }
+}
+
+export class DrawPhase {
+    public digestMessage(message: string, player: Player): void {
+        return
+    }
+    public trasition(): void {
+        return
     }
 }

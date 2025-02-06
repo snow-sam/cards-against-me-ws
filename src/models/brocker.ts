@@ -66,6 +66,7 @@ export class Brocker {
     public addPlayer = (player: Player) => {
         this.playersMap.set(player.name, player)
         this.playersState.attach(player)
+        this.server.sendCards([], player.socketID)
         return player
     }
 
@@ -90,6 +91,7 @@ export class Brocker {
     }
 
     public canTransition = (): boolean => {
+        console.log(this.playersMap.values())
         return Array.from(this.playersMap.values()).every(player => player.ready);
     }
 }

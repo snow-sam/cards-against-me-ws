@@ -56,7 +56,7 @@ io.of("/").adapter.on("leave-room", (roomId, id) => {
     const brocker = roomBrockerMap.get(roomId)
     const player = socketIdPlayerMap.get(id)
     brocker.server.emitRoomMessage(`${player.name} has left`)
-    brocker.removePlayer(player.name)
+    brocker.removePlayer(player)
     socketIdPlayerMap.delete(id)
 });
 
