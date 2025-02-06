@@ -27,6 +27,10 @@ class ServerFacade {
         this.server.to(this.roomId).emit("data", new RoomMessage(message))
     }
 
+    public emitScore = (score: [string, number][]) => {
+        this.server.to(this.roomId).emit("score", score)
+    }
+
     public sendCards = (cards: string[], socketID: string = null) => {
         this.server.to(!socketID ? this.roomId : socketID).emit("cards", cards)
     }
@@ -37,6 +41,7 @@ export class Brocker {
     private phase: Phase;
     private playersMap: Map<string, Player> = new Map()
     public playerVotes: Map<string, Card> = new Map()
+    public scoreMap: Map<string, number> = new Map()
 
     public questionCards: string[]
     public answerCards: string[]
@@ -66,6 +71,7 @@ export class Brocker {
     public addPlayer = (player: Player) => {
         this.playersMap.set(player.name, player)
         this.playersState.attach(player)
+        this.scoreMap.set(player.name, 0)
         this.server.sendCards([], player.socketID)
         return player
     }
@@ -73,6 +79,7 @@ export class Brocker {
     public removePlayer = (player: Player) => {
         this.playersMap.delete(player.name)
         this.playersState.detach(player)
+        this.scoreMap.delete(player.name)
         return player
     }
 
@@ -91,7 +98,6 @@ export class Brocker {
     }
 
     public canTransition = (): boolean => {
-        console.log(this.playersMap.values())
         return Array.from(this.playersMap.values()).every(player => player.ready);
     }
 }

@@ -69,7 +69,7 @@ export class VotingPhase extends Phase {
     }
 
     public trasition(): void {
-        const { server, playerVotes, canTransition } = this.context
+        const { server, playerVotes, canTransition, scoreMap } = this.context
         if (!canTransition()) return
 
         // Calcular vencedor
@@ -97,7 +97,12 @@ export class VotingPhase extends Phase {
             return
         }
 
-        server.emitRoomMessage(`${winners.pop().author} venceu`)
+        const winner = winners.pop().author
+        scoreMap.set(winner, scoreMap.get(winner) + 1)
+        const scoreList = Array.from(scoreMap);
+        scoreList.sort((a, b) => a[1] - b[1])
+        server.emitRoomMessage(`${winner} venceu`)
+        server.emitScore(scoreList)
         server.sendCards([])
         this.context.transitionTo(new StartPhase());
     }
